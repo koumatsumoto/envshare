@@ -1,11 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import { accessSync, constants, lstatSync, realpathSync, statSync } from 'node:fs';
 import { delimiter, dirname, isAbsolute, join, relative, sep } from 'node:path';
-import { EnvshareError } from './error.js';
+import { EnvshareError } from './error.ts';
 
-const statOptions = { throwIfNoEntry: false };
+const statOptions = { throwIfNoEntry: false } as const;
 
-function gitProjectRoot(cwd) {
+function gitProjectRoot(cwd: string) {
   for (let directory = cwd;; directory = dirname(directory)) {
     const path = join(directory, '.git');
     const marker = lstatSync(path, statOptions);
@@ -16,15 +16,15 @@ function gitProjectRoot(cwd) {
   }
 }
 
-function within(directory, path) {
+function within(directory: string, path: string) {
   const distance = relative(directory, path);
   return !isAbsolute(distance) && distance !== '..' && !distance.startsWith('..' + sep);
 }
 
-function findGit(env, projectRoots) {
+function findGit(env: NodeJS.ProcessEnv, projectRoots: string[]) {
   const path = Object.entries(env).find(([name]) => /^path$/i.test(name))?.[1] ?? '';
   const bin = process.platform === 'win32' ? 'git.exe' : 'git';
-  const inProject = (name) => projectRoots.some((root) => within(root, name));
+  const inProject = (name: string) => projectRoots.some((root) => within(root, name));
   for (const entry of path.split(delimiter)) {
     const directory = entry.replace(/^"(.*)"$/, '$1');
     if (!isAbsolute(directory) || inProject(directory)) continue;
@@ -43,7 +43,7 @@ function findGit(env, projectRoots) {
   }
 }
 
-export function gitIgnoreGuard(cwd, secondProject = cwd) {
+export function gitIgnoreGuard(cwd: string, secondProject = cwd) {
   const unavailable = () => new EnvshareError('Git の無視設定を確認できません。Git と作業ツリーを確認してください。');
   let projectRoot;
   let otherRoot;
@@ -63,7 +63,7 @@ export function gitIgnoreGuard(cwd, secondProject = cwd) {
   const git = findGit(env, otherRoot ? [projectRoot, otherRoot] : [projectRoot]);
   if (!git) throw unavailable();
 
-  const status = (args) => {
+  const status = (args: string[]) => {
     const result = spawnSync(git, args, {
       cwd: projectRoot, env, stdio: 'ignore', windowsHide: true, timeout: 5000,
     });
@@ -71,7 +71,7 @@ export function gitIgnoreGuard(cwd, secondProject = cwd) {
     return result.status;
   };
 
-  return (path, label) => {
+  return (path: string, label: string) => {
     if (!within(cwd, path)) throw unavailable();
     const target = join(physicalDirectory, relative(cwd, path));
     const name = relative(projectRoot, target).split(sep).join('/');

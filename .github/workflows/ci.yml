@@ -27,5 +27,6 @@ jobs:
           check-latest: true
           package-manager-cache: false
       - run: node --version
+      - run: npm ci --ignore-scripts
       - run: npm test
-      - run: npm exec --offline --yes --ignore-scripts --package=. -- envshare --help
+      - run: npm run test:package

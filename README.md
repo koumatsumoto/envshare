@@ -1,6 +1,10 @@
 # envshare
 
-チームで共有する dotenv 設定だけを暗号化して Git に置き、各自の `.env` に差分を追記する CLI。外部サービスや npm 依存はありません。最新の Windows・macOS・Linux で Node.js 24 または 26 の最新 LTS パッチを使います。
+チームで共有する dotenv 設定だけを暗号化して Git に置き、各自の `.env` に差分を追記する CLI。外部サービスや実行時の npm 依存はありません。最新の Windows・macOS・Linux と、Node.js 24・26 各系列の最新パッチをサポートします。
+
+## インストール
+
+公開版は `npm install --global envshare` でインストールします。TypeScript や追加のライブラリは不要です。
 
 ## 使い方
 
@@ -8,7 +12,7 @@
 2. 配布側は、共有したいキーだけを `.env.share.local` に書き、`envshare encrypt .env.share.local` を実行します。Git に追加するのは `envshare.enc` だけです。出力名を変える場合は `--out <path>` を指定できます。既存ファイルは envshare の暗号ファイルの場合だけ置換します。
 3. 受取側は `envshare.enc` があるプロジェクトのルートで `envshare sync` を実行します。明示的に用意した環境変数から初回登録するなら `envshare sync --bootstrap`。環境変数 `ENVSHARE_KEY` を使い、同期成功時だけローカル `.env` に保存します。両方に異なる鍵があれば失敗します。
 
-CLI をまだ PATH に登録していなくても、コマンド中の `envshare` を `node <checkout>/src/cli.js` に置き換えれば実行できます。パスに空白があれば、スクリプトへのパスを引用符で囲んでください。
+CLI をまだ PATH に登録していなくても、コマンド中の `envshare` を `node <checkout>/src/cli.ts` に置き換えれば、対応する Node.js だけで直接実行できます。パスに空白があれば、スクリプトへのパスを引用符で囲んでください。
 
 ## 同期のルール
 
@@ -22,4 +26,6 @@ CLI をまだ PATH に登録していなくても、コマンド中の `envshare
 
 ## 開発
 
-`npm test` で、実際の CLI から発行と同期を検証します。テストはダミーの鍵と設定だけを使用します。
+`npm ci` で開発用の TypeScript コンパイラと Node.js の型定義をインストールします。`npm test` は厳格な型検査・ビルドの後、生成した CLI の発行と同期をダミーの鍵・設定で検証します。
+
+`npm pack` でもビルドを実行します。配布する実装は `dist/` の JavaScript のみで、利用者側ではビルドしません。`npm run test:package` は実際の配布アーカイブを空のディレクトリにオフラインでインストールし、暗号化・同期まで確認します。

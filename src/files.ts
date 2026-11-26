@@ -1,24 +1,25 @@
 import {
-  chmodSync, closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdtempSync,
+  type BigIntStats, chmodSync, closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdtempSync,
   openSync, readFileSync, renameSync, rmdirSync, unlinkSync, writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { EnvshareError } from './error.js';
+import { EnvshareError } from './error.ts';
 
 const READ_FLAGS = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
-const statOptions = { bigint: true, throwIfNoEntry: false };
-const snapshotFields = ['dev', 'ino', 'size', 'mode', 'mtimeNs', 'ctimeNs'];
+type Snapshot = BigIntStats | undefined;
+const statOptions = { bigint: true, throwIfNoEntry: false } as const;
+const snapshotFields = ['dev', 'ino', 'size', 'mode', 'mtimeNs', 'ctimeNs'] as const;
 
-function sameSnapshot(a, b) {
+function sameSnapshot(a: Snapshot, b: Snapshot) {
   if (!a || !b) return a === b;
   return snapshotFields.every((field) => a[field] === b[field]);
 }
 
-export function sameFile(a, b) {
+export function sameFile(a: Snapshot, b: Snapshot) {
   return Boolean(a && b && a.dev === b.dev && a.ino === b.ino);
 }
 
-export function readRegular(path, label, { optional = false } = {}) {
+export function readRegular(path: string, label: string, { optional = false } = {}) {
   const invalid = () => new EnvshareError(label + ' は通常のファイルである必要があります。');
   const changed = () => new EnvshareError(label + ' が読み取り中に変更されました。再実行してください。');
   let fd;
@@ -41,7 +42,8 @@ export function readRegular(path, label, { optional = false } = {}) {
   }
 }
 
-export function replaceAtomic(path, bytes, snapshot, label, { mode, verifyTemporary } = {}) {
+export function replaceAtomic(path: string, bytes: Buffer, snapshot: Snapshot, label: string,
+  { mode, verifyTemporary }: { mode?: number; verifyTemporary?: (path: string) => void } = {}) {
   let directory;
   let temporary;
   try {
@@ -73,7 +75,7 @@ export function replaceAtomic(path, bytes, snapshot, label, { mode, verifyTempor
       try {
         unlinkSync(temporary);
       } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
+        if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
       }
     }
     if (directory) {
