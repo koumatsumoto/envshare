@@ -4,7 +4,7 @@
 
 ## インストール
 
-公開版は `npm install --global @kou-matsumoto/envshare` でインストールします。TypeScript や追加のライブラリは不要です。
+公開版は `npm install --global @koumatsumoto/envshare` でインストールします。TypeScript や追加のライブラリは不要です。
 
 ## 使い方
 
