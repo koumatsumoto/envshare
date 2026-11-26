@@ -72,15 +72,15 @@ jobs:
           import { readFileSync } from 'node:fs';
           import { join } from 'node:path';
           let response;
-          for (let attempt = 1; attempt <= 4; attempt++) {
+          for (let attempt = 1; attempt <= 8; attempt++) {
             response = await fetch('https://registry.npmjs.org/@kou-matsumoto%2Fenvshare/0.1.0', {
               redirect: 'error', signal: AbortSignal.timeout(15_000),
             });
             if (response.status === 200) break;
-            if (response.status !== 404 || attempt === 4) {
+            if (response.status !== 404 || attempt === 8) {
               throw new Error(`Release is not verified: HTTP ${response.status}`);
             }
-            await new Promise(resolve => setTimeout(resolve, 3_000));
+            await new Promise(resolve => setTimeout(resolve, 5_000));
           }
           const { name, version, dist } = await response.json();
           const digest = createHash('sha512')
@@ -95,4 +95,5 @@ jobs:
         run: |
           consumer=$(mktemp -d "$RUNNER_TEMP/envshare-npm-check.XXXXXX")
           npm install --prefix "$consumer" --cache "$consumer/cache" --registry https://registry.npmjs.org/ --no-save --ignore-scripts --no-audit --no-fund @kou-matsumoto/envshare@0.1.0
-          "$consumer/node_modules/.bin/envshare" --help | grep -F 'envshare encrypt'
+          cli_help=$("$consumer/node_modules/.bin/envshare" --help)
+          printf '%s\n' "$cli_help" | grep -F 'envshare encrypt'
