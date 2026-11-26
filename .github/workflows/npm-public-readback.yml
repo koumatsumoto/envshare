@@ -1,0 +1,48 @@
+name: Verify public npm package (read only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/npm-public-readback.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  public-install:
+    if: ${{ github.repository == 'koumatsumoto/envshare' && github.event.pull_request.head.repo.full_name == 'koumatsumoto/envshare' && github.head_ref == 'verify/npm-public-0.1.0' }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.22.3'
+          package-manager-cache: false
+      - name: Read and install only @koumatsumoto/envshare@0.1.0
+        shell: bash
+        run: |
+          consumer=$(mktemp -d "$RUNNER_TEMP/envshare-readback.XXXXXX")
+          cd "$consumer"
+          export npm_config_cache="$consumer/cache"
+          version='@koumatsumoto/envshare@0.1.0'
+          registry='https://registry.npmjs.org/'
+          for attempt in {1..12}; do
+            if npm view "$version" dist --registry "$registry" --prefer-online --fetch-retries=0 --fetch-timeout=10000 --json >dist.json 2>read.err && node -e 'const d = require("./dist.json"); process.exit(d?.shasum ? 0 : 1)'; then
+              break
+            fi
+            if [ -s read.err ] && ! grep -Eq 'E404|ETARGET' read.err; then
+              cat read.err >&2
+              exit 1
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              echo "$version is not visible in public npm metadata." >&2
+              exit 1
+            fi
+            sleep 20
+          done
+          node -e 'const d = require("./dist.json"); const u = new URL(d.tarball); if (d.shasum !== "6bd3479ba547137f7dd003e339c8b9c4fa065913" || !d.integrity?.startsWith("sha512-") || u.origin !== "https://registry.npmjs.org") process.exit(1); console.log("Public registry digest matches the accepted tarball")'
+          npm install --registry "$registry" --prefer-online --no-save --ignore-scripts --no-audit --no-fund "$version"
+          node -e 'const p = require("./node_modules/@koumatsumoto/envshare/package.json"); if (p.name !== "@koumatsumoto/envshare" || p.version !== "0.1.0" || p.license !== "MIT") process.exit(1)'
+          cli_help=$(./node_modules/.bin/envshare --help)
+          printf '%s\n' "$cli_help" | grep -F 'envshare encrypt'
