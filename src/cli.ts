@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { dirname, resolve } from 'node:path';
-import { appendEntries, parseDotenv, renderEntries } from './dotenv.js';
-import { decodeKey, isEnvelope, seal, unseal } from './envelope.js';
-import { EnvshareError } from './error.js';
-import { readRegular, replaceAtomic, sameFile } from './files.js';
-import { gitIgnoreGuard } from './git.js';
+import { appendEntries, parseDotenv, renderEntries, type Dotenv } from './dotenv.ts';
+import { decodeKey, isEnvelope, seal, unseal } from './envelope.ts';
+import { EnvshareError } from './error.ts';
+import { readRegular, replaceAtomic, sameFile } from './files.ts';
+import { gitIgnoreGuard } from './git.ts';
 
 const KEY_NAME = 'ENVSHARE_KEY';
 const CWD = process.cwd();
@@ -24,7 +24,7 @@ function readLocal() {
   return { doc, snapshot };
 }
 
-function sharedEntries(bytes, label) {
+function sharedEntries(bytes: Buffer, label: string) {
   const { entries } = parseDotenv(bytes, label);
   if ([...entries.keys()].some((key) => key.toUpperCase() === KEY_NAME)) {
     throw new EnvshareError(label + ' には ENVSHARE_KEY を含められません。');
@@ -32,7 +32,7 @@ function sharedEntries(bytes, label) {
   return entries;
 }
 
-function selectKey(doc, bootstrap) {
+function selectKey(doc: Dotenv, bootstrap: boolean) {
   const local = doc.entries.get(KEY_NAME)?.value;
   const supplied = bootstrap ? process.env[KEY_NAME] : undefined;
   if (bootstrap && supplied === undefined) {
@@ -48,7 +48,7 @@ function selectKey(doc, bootstrap) {
   return { key: decodeKey(value), remember: local === undefined ? value : undefined };
 }
 
-function encrypt(input, output) {
+function encrypt(input: string, output: string) {
   const local = readLocal();
   const { key } = selectKey(local.doc, false);
   const source = readRegular(input, SOURCE);
@@ -71,7 +71,7 @@ function encrypt(input, output) {
   console.log('暗号ファイルを作成しました。');
 }
 
-function sync(bootstrap) {
+function sync(bootstrap: boolean) {
   const { doc, snapshot } = readLocal();
   const { key, remember } = selectKey(doc, bootstrap);
   const { bytes } = readRegular(ENCRYPTED_PATH, ENCRYPTED);
@@ -93,7 +93,7 @@ function sync(bootstrap) {
   console.log('同期しました（設定 ' + count + ' 件' + (remember !== undefined ? '、共有鍵を保存' : '') + '）。');
 }
 
-function main([command, ...args]) {
+function main([command, ...args]: string[]) {
   if (command === 'encrypt' &&
       (args.length === 1 || (args.length === 3 && args[1] === '--out' && args[2] && !args[2].startsWith('-'))) &&
       args[0] && !args[0].startsWith('-')) {

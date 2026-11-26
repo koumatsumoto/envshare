@@ -9,9 +9,9 @@ import { delimiter, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
-import { seal } from '../src/envelope.js';
+import { seal } from '../dist/envelope.js';
 
-const cli = fileURLToPath(new URL('../src/cli.js', import.meta.url));
+const cli = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 const dummyKey = Buffer.alloc(32, 1).toString('base64');
 const otherKey = Buffer.alloc(32, 2).toString('base64');
 const sourceName = '.env.share ローカル';
