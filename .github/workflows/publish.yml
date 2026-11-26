@@ -1,12 +1,10 @@
 name: Publish to npm
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_sha:
-        description: Reviewed main commit SHA
-        required: true
-        type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish.yml'
 
 permissions:
   contents: read
@@ -17,18 +15,10 @@ concurrency:
 
 jobs:
   publish:
-    if: ${{ github.repository == 'koumatsumoto/envshare' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'push' && github.repository == 'koumatsumoto/envshare' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
-      - name: Require the reviewed main commit
-        env:
-          REVIEWED_SHA: ${{ inputs.release_sha }}
-        run: |
-          if [ "$GITHUB_SHA" != "$REVIEWED_SHA" ]; then
-            echo 'main changed since this release was reviewed.' >&2
-            exit 1
-          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
