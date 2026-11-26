@@ -1,5 +1,5 @@
 {
-  "name": "@kou-matsumoto/envshare",
+  "name": "@koumatsumoto/envshare",
   "version": "0.1.0",
   "license": "MIT",
   "description": "Share encrypted dotenv settings in Git and sync changes into a local .env.",

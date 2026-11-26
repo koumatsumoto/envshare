@@ -39,8 +39,8 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           const { name, version } = JSON.parse(readFileSync('package.json', 'utf8'));
-          if (name !== '@kou-matsumoto/envshare' || version !== '0.1.0') {
-            throw new Error('This workflow is only for the initial @kou-matsumoto/envshare@0.1.0 release');
+          if (name !== '@koumatsumoto/envshare' || version !== '0.1.0') {
+            throw new Error('This workflow is only for the initial @koumatsumoto/envshare@0.1.0 release');
           }
           NODE
 
@@ -55,12 +55,12 @@ jobs:
           fi
           # Anonymous 404 alone does not rule out an existing private scoped package.
           node --input-type=module <<'NODE'
-          const response = await fetch('https://registry.npmjs.org/@kou-matsumoto%2Fenvshare', {
+          const response = await fetch('https://registry.npmjs.org/@koumatsumoto%2fenvshare', {
             headers: { Authorization: `Bearer ${process.env.NODE_AUTH_TOKEN}` },
             redirect: 'error', signal: AbortSignal.timeout(15_000),
           });
-          if (response.status === 200) throw new Error('The npm package @kou-matsumoto/envshare already exists');
-          if (response.status !== 404) throw new Error(`Cannot verify @kou-matsumoto/envshare: HTTP ${response.status}`);
+          if (response.status === 200) throw new Error('The npm package @koumatsumoto/envshare already exists');
+          if (response.status !== 404) throw new Error(`Cannot verify @koumatsumoto/envshare: HTTP ${response.status}`);
           NODE
           npm publish "$RUNNER_TEMP/envshare-release.tgz" --registry https://registry.npmjs.org/ --access public --ignore-scripts --fetch-retries=0 --fetch-timeout=60000
 
@@ -71,29 +71,34 @@ jobs:
           import { createHash } from 'node:crypto';
           import { readFileSync } from 'node:fs';
           import { join } from 'node:path';
-          let response;
+          let manifest;
           for (let attempt = 1; attempt <= 8; attempt++) {
-            response = await fetch('https://registry.npmjs.org/@kou-matsumoto%2Fenvshare/0.1.0', {
+            const response = await fetch('https://registry.npmjs.org/@koumatsumoto%2fenvshare', {
+              headers: { Accept: 'application/json' },
               redirect: 'error', signal: AbortSignal.timeout(15_000),
             });
-            if (response.status === 200) break;
-            if (response.status !== 404 || attempt === 8) {
+            if (response.status === 200) {
+              const packument = await response.json();
+              manifest = packument.versions?.['0.1.0'];
+              if (manifest) break;
+            } else if (response.status !== 404) {
               throw new Error(`Release is not verified: HTTP ${response.status}`);
             }
-            await new Promise(resolve => setTimeout(resolve, 5_000));
+            if (attempt < 8) await new Promise(resolve => setTimeout(resolve, 5_000));
           }
-          const { name, version, dist } = await response.json();
+          if (!manifest) throw new Error('Version 0.1.0 is not yet visible in public package metadata');
+          const { name, version, dist } = manifest;
           const digest = createHash('sha512')
             .update(readFileSync(join(process.env.RUNNER_TEMP, 'envshare-release.tgz'))).digest('base64');
-          if (name !== '@kou-matsumoto/envshare' || version !== '0.1.0' || dist?.integrity !== `sha512-${digest}`) {
+          if (name !== '@koumatsumoto/envshare' || version !== '0.1.0' || dist?.integrity !== `sha512-${digest}`) {
             throw new Error('Registry version or integrity differs from the tested tarball');
           }
-          console.log('Verified @kou-matsumoto/envshare@0.1.0 on the public npm registry');
+          console.log('Verified @koumatsumoto/envshare@0.1.0 on the public npm registry');
           NODE
 
       - name: Install the published package in a clean directory
         run: |
           consumer=$(mktemp -d "$RUNNER_TEMP/envshare-npm-check.XXXXXX")
-          npm install --prefix "$consumer" --cache "$consumer/cache" --registry https://registry.npmjs.org/ --no-save --ignore-scripts --no-audit --no-fund @kou-matsumoto/envshare@0.1.0
+          npm install --prefix "$consumer" --cache "$consumer/cache" --registry https://registry.npmjs.org/ --no-save --ignore-scripts --no-audit --no-fund @koumatsumoto/envshare@0.1.0
           cli_help=$("$consumer/node_modules/.bin/envshare" --help)
           printf '%s\n' "$cli_help" | grep -F 'envshare encrypt'
