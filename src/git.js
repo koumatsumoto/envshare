@@ -24,14 +24,17 @@ function within(directory, path) {
 function findGit(env, projectRoots) {
   const path = Object.entries(env).find(([name]) => /^path$/i.test(name))?.[1] ?? '';
   const bin = process.platform === 'win32' ? 'git.exe' : 'git';
+  const inProject = (name) => projectRoots.some((root) => within(root, name));
   for (const entry of path.split(delimiter)) {
     const directory = entry.replace(/^"(.*)"$/, '$1');
-    if (!isAbsolute(directory)) continue;
-    const candidate = join(directory, bin);
+    if (!isAbsolute(directory) || inProject(directory)) continue;
     try {
-      if (projectRoots.some((root) => within(root, candidate)) || !statSync(candidate).isFile()) continue;
-      const physical = realpathSync(candidate);
-      if (projectRoots.some((root) => within(root, physical))) continue;
+      // Resolve the directory separately: a repo's git symlink may point back
+      // outside the repo, hiding its location if only the leaf is resolved.
+      const physicalDirectory = realpathSync(directory);
+      if (inProject(physicalDirectory)) continue;
+      const candidate = join(physicalDirectory, bin);
+      if (!statSync(candidate).isFile() || inProject(realpathSync(candidate))) continue;
       accessSync(candidate, constants.X_OK);
       return candidate;
     } catch {

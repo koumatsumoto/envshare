@@ -393,12 +393,14 @@ test('a tracked case alias cannot receive plaintext or a bootstrap key', (t) => 
 test('the working tree is not searched for an executable Git', (t) => {
   const root = gitProject(t);
   if (!root) return;
+  const aliasedPath = join(project(t), 'worktree-alias');
   const installed = (platformEnv.PATH ?? '').split(delimiter)
     .map((dir) => join(dir.replace(/^"(.*)"$/, '$1'), gitName))
     .find((path) => existsSync(path));
   assert.ok(installed);
   try {
     symlinkSync(installed, join(root, gitName), 'file');
+    symlinkSync(root, aliasedPath, process.platform === 'win32' ? 'junction' : 'dir');
   } catch (error) {
     if (process.platform !== 'win32' || error.code !== 'EPERM') throw error;
     t.skip('Windows runner does not permit file symlinks');
@@ -406,8 +408,10 @@ test('the working tree is not searched for an executable Git', (t) => {
   }
   writeFileSync(join(root, cipherName), publish(project(t)));
   writeFileSync(join(root, '.gitignore'), '.env\n.envshare-tmp-*/\n');
-  fail(run(root, ['sync', '--bootstrap'], dummyKey, { PATH: root }), /Git の無視設定を確認できません/);
-  assert.ok(!existsSync(join(root, localName)));
+  for (const path of [root, aliasedPath]) {
+    fail(run(root, ['sync', '--bootstrap'], dummyKey, { PATH: path }), /Git の無視設定を確認できません/);
+    assert.ok(!existsSync(join(root, localName)));
+  }
 });
 
 test('non-regular input and output paths are refused', (t) => {
